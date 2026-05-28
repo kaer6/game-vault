@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="referrer" content="no-referrer" />
     <title>卡尔的游戏小屋</title>
     <style>
         /* ===== 全局 ===== */
@@ -713,7 +714,7 @@
             return `
                 <div class="card">
                     <div class="card-cover" style="background: ${colorHash}">
-                        ${game.image ? `<img class="cover-img" src="${game.image}" alt="${game.name}" onerror="this.style.display='none'" />` : ''}
+                        ${game.image ? `<img class="cover-img" src="${game.image}" alt="${game.name}" referrerpolicy="no-referrer" onerror="this.style.display='none'" />` : ''}
                         <span class="initials">${initials}</span>
                         <span class="platform-badge ${game.cross ? 'badge-cross' : (game.platform === '安卓' ? 'badge-android' : 'badge-pc')}">
                             ${game.cross ? '💻📱 PC+安卓' : (game.platform === '安卓' ? '📱 安卓' : '🖥️ PC')}
