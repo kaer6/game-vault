@@ -257,6 +257,22 @@
             position: relative;
             overflow: hidden;
         }
+        .card-cover img.cover-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            position: absolute;
+            inset: 0;
+        }
+        .card-cover .cover-fallback {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            inset: 0;
+        }
         .card-cover .initials {
             font-size: 2.4rem;
             font-weight: 700;
@@ -589,6 +605,10 @@
                     <label>百度网盘链接</label>
                     <input type="url" id="formBaidu" placeholder="https://pan.baidu.com/s/..." />
                 </div>
+                <div class="form-group">
+                    <label>封面图片链接（可选）</label>
+                    <input type="url" id="formImage" placeholder="https://... 粘贴游戏封面或截图链接" />
+                </div>
                 <div class="form-actions">
                     <button type="button" class="btn btn-ghost" onclick="closeModal('gameFormOverlay')">取消</button>
                     <button type="submit" class="btn btn-orange" id="formSubmitBtn">✅ 保存</button>
@@ -688,6 +708,7 @@
             return `
                 <div class="card">
                     <div class="card-cover" style="background: ${colorHash}">
+                        ${game.image ? `<img class="cover-img" src="${game.image}" alt="${game.name}" onerror="this.style.display='none'" />` : ''}
                         <span class="initials">${initials}</span>
                         <span class="platform-badge ${game.platform === '安卓' ? 'badge-android' : 'badge-pc'}">
                             ${game.platform === '安卓' ? '📱 安卓' : '🖥️ PC'}
@@ -831,6 +852,7 @@
         document.getElementById('formPlatform').value = game.platform;
         document.getElementById('formQuark').value = game.quark || '';
         document.getElementById('formBaidu').value = game.baidu || '';
+        document.getElementById('formImage').value = game.image || '';
         document.getElementById('gameFormOverlay').classList.add('show');
     }
 
@@ -843,16 +865,17 @@
         const platform = document.getElementById('formPlatform').value;
         const quark = document.getElementById('formQuark').value.trim();
         const baidu = document.getElementById('formBaidu').value.trim();
+        const image = document.getElementById('formImage').value.trim();
 
         if (!name) { showToast('⚠️ 请输入游戏名称'); return; }
 
         if (idx === -1) {
             // 新增
-            allGames.unshift({ name, platform, quark, baidu });
+            allGames.unshift({ name, platform, quark, baidu, image });
             showToast('🎮 游戏已添加');
         } else {
             // 编辑
-            allGames[idx] = { ...allGames[idx], name, platform, quark, baidu };
+            allGames[idx] = { ...allGames[idx], name, platform, quark, baidu, image };
             showToast('✅ 修改已保存');
         }
 
