@@ -529,6 +529,52 @@
             .grid { grid-template-columns: 1fr; }
             .modal { padding: 1.5rem; }
         }
+
+        /* ===== 每日更新 ===== */
+        .daily-list { max-width: 800px; margin: 0 auto; }
+        .daily-post {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.04);
+            border-radius: 10px;
+            padding: 16px; margin-bottom: 12px;
+            display: flex; gap: 14px; transition: 0.15s;
+        }
+        .daily-post:hover { background: rgba(255,255,255,0.04); }
+        .daily-post .post-thumb {
+            width: 80px; height: 80px; min-width: 80px;
+            border-radius: 8px; object-fit: cover; background: #0f3460;
+        }
+        .daily-post .post-info { flex: 1; min-width: 0; }
+        .daily-post .post-title {
+            font-size: 15px; font-weight: 600;
+            margin-bottom: 6px; color: #e0e6f0;
+        }
+        .daily-post .post-badges { margin-bottom: 6px; display: flex; gap: 6px; flex-wrap: wrap; }
+        .daily-post .post-badge {
+            font-size: 10px; padding: 2px 8px; border-radius: 4px; font-weight: 600;
+        }
+        .badge-dpc { background: rgba(59,130,246,0.15); color: #60a5fa; }
+        .badge-dmobile { background: rgba(34,197,94,0.15); color: #4ade80; }
+        .badge-dcross { background: rgba(251,146,60,0.15); color: #fb923c; }
+        .post-body {
+            font-size: 13px; color: #8a9ab8; line-height: 1.7;
+            margin-bottom: 8px;
+            display: -webkit-box; -webkit-line-clamp: 4;
+            -webkit-box-orient: vertical; overflow: hidden;
+        }
+        .post-links { display: flex; gap: 8px; flex-wrap: wrap; }
+        .post-links a {
+            display: inline-block; padding: 5px 14px;
+            border-radius: 6px; font-size: 12px; font-weight: 600;
+            text-decoration: none; transition: 0.15s;
+        }
+        .post-links .btn-quark { background: linear-gradient(135deg,#f59e0b,#ea580c); color:#fff; }
+        .post-links .btn-baidu { background: rgba(255,255,255,0.08); color:#8a9ab8; border:1px solid rgba(255,255,255,0.08); }
+        .post-links a:hover { transform: translateY(-1px); }
+        @media (max-width: 600px) {
+            .daily-post { flex-direction: column; }
+            .daily-post .post-thumb { width: 100%; height: 160px; }
+        }
     </style>
 </head>
 <body>
@@ -560,6 +606,7 @@
         <button class="pill active" data-filter="all">🎮 全部</button>
         <button class="pill" data-filter="PC">🖥️ PC 游戏</button>
         <button class="pill" data-filter="安卓">📱 安卓游戏</button>
+        <button class="pill" data-filter="daily">🆕 每日更新</button>
     </div>
 
     <!-- ===== 主内容 ===== -->
@@ -569,6 +616,7 @@
             <p>正在加载游戏数据...</p>
         </div>
         <div class="grid" id="gameGrid" style="display:none"></div>
+        <div class="daily-list" id="dailyList" style="display:none"></div>
         <div id="pagination"></div>
     </div>
 
@@ -635,6 +683,8 @@
     // ================================================================
 
     let allGames = [];
+    let allPosts = [];
+    let isDaily = false;
     let isAdmin = false;
     const ADMIN_PASSWORD = 'kaerking';
     const PAGE_SIZE_KEY = 'gamevault_pageSize';
@@ -657,6 +707,21 @@
         }
     }
 
+    async function loadDailyData() {
+        try {
+            const res = await fetch('posts.json');
+            allPosts = await res.json();
+            document.getElementById('loadingIndicator').style.display = 'none';
+            document.getElementById('dailyList').style.display = '';
+            document.getElementById('totalCount').textContent = allPosts.length;
+            currentPage = 1;
+            applyFilters();
+        } catch (e) {
+            document.getElementById('loadingIndicator').innerHTML =
+                '<p style="color:#ef4444">❌ 每日更新加载失败，请确保 posts.json 文件存在</p>';
+        }
+    }
+
     // ================================================================
     //  3. 状态 & 渲染
     // ================================================================
@@ -669,6 +734,24 @@
     function applyFilters() {
         const kw = document.getElementById('searchInput').value.trim().toLowerCase();
         currentKeyword = kw;
+
+        // 每日更新模式
+        if (isDaily) {
+            document.getElementById('gameGrid').style.display = 'none';
+            document.getElementById('dailyList').style.display = '';
+            let filtered = allPosts;
+            if (kw) filtered = filtered.filter(p => p.title.toLowerCase().includes(kw));
+            document.getElementById('shownCount').textContent = filtered.length;
+            const dp = Math.max(1, Math.ceil(filtered.length / pageSize));
+            if (currentPage > dp) currentPage = dp;
+            renderDailyPosts(filtered, dp);
+            renderPagination(filtered.length, dp);
+            return;
+        }
+
+        // 游戏库模式
+        document.getElementById('dailyList').style.display = 'none';
+        document.getElementById('gameGrid').style.display = '';
 
         let filtered = allGames;
         if (currentFilter !== 'all') {
@@ -717,7 +800,7 @@
             return `
                 <div class="card">
                     <div class="card-cover" style="background: ${colorHash}">
-                        ${game.image ? `<img class="cover-img" src="${game.image}" alt="${game.name}" referrerpolicy="no-referrer" onerror="this.style.display='none'" />` : ''}
+                        ${game.image ? `<img class="cover-img" src="${game.image}" alt="${game.name}" referrerpolicy="no-referrer" onerror="this.style.display=none" />` : ''}
                         <span class="initials">${initials}</span>
                         <span class="platform-badge ${game.cross ? 'badge-cross' : (game.platform === '安卓' ? 'badge-android' : 'badge-pc')}">
                             ${game.cross ? '💻📱 PC+安卓' : (game.platform === '安卓' ? '📱 安卓' : '🖥️ PC')}
@@ -739,6 +822,32 @@
                     </div>
                 </div>
             `;
+        }).join('');
+    }
+
+    function renderDailyPosts(filtered, totalPages) {
+        var list = document.getElementById('dailyList');
+        var start = (currentPage - 1) * pageSize;
+        var page = filtered.slice(start, start + pageSize);
+        if (page.length === 0) {
+            list.innerHTML = '<div class="empty-state"><p>mei you pi pei de tie zi</p></div>';
+            return;
+        }
+        list.innerHTML = page.map(function(post) {
+            var pc = post.platform === 'PC' ? 'badge-dpc' : post.platform === '手机' ? 'badge-dmobile' : 'badge-dcross';
+            var pt = post.platform === 'PC' ? 'PC' : post.platform === '手机' ? '手机' : 'PC+手机';
+            var links = '';
+            if (post.quark) links += '<a href="' + post.quark + '" target="_blank" class="btn-quark">夸克下载</a> ';
+            if (post.baidu) links += '<a href="' + post.baidu + '" target="_blank" class="btn-baidu">百度下载</a> ';
+            var img = post.image ? '<img class="post-thumb" src="' + post.image + '" loading="lazy" onerror="this.style.display=none">' : '<div class="post-thumb" style="background:linear-gradient(135deg,#0f3460,#16213e);display:flex;align-items:center;justify-content:center;font-size:20px;color:#555">🎮</div>';
+            var bodyText = (post.body || '').replace(/<br>/g, ' ').substring(0, 300);
+            return '<div class="daily-post">' + img +
+                '<div class="post-info">' +
+                '<div class="post-title">' + post.title + '</div>' +
+                '<div class="post-badges"><span class="post-badge ' + pc + '">' + pt + '</span></div>' +
+                '<div class="post-body">' + bodyText + '</div>' +
+                '<div class="post-links">' + links + '</div>' +
+                '</div></div>';
         }).join('');
     }
 
@@ -790,7 +899,22 @@
         if (!btn) return;
         document.querySelectorAll('#filterBar .pill').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        currentFilter = btn.dataset.filter;
+        const filterVal = btn.dataset.filter;
+        if (filterVal === 'daily') {
+            isDaily = true;
+            currentFilter = 'all';
+            if (allPosts.length === 0) {
+                document.getElementById('loadingIndicator').style.display = 'block';
+                document.getElementById('loadingIndicator').innerHTML = '<div class="spinner"></div><p>正在加载每日更新...</p>';
+                document.getElementById('gameGrid').style.display = 'none';
+                document.getElementById('dailyList').style.display = 'none';
+                loadDailyData();
+                return;
+            }
+        } else {
+            isDaily = false;
+            currentFilter = filterVal;
+        }
         currentPage = 1;
         applyFilters();
     });
